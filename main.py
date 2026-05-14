@@ -83,16 +83,6 @@ async def delete_facture(id: int):
             return {"message": "facture deleted"}
     return {"message": "facture not found"}
 
-@app.put("/facturas/{id}", response_model=Facture)
-async def update_facture(id: int, updated_facture: Facture):
-    for f in facture:
-        if f.id == id:
-            f.date = updated_facture.date
-            f.client = updated_facture.client
-            f.totalvalue = updated_facture.totalvalue
-            return f
-    return {"message": "facture not found"}
-
 # TRANSACTIONS ENDPOINTS
 @app.get("/transacciones")
 async def list_transactions():
@@ -118,22 +108,3 @@ async def delete_transaction(id: int):
             transaction.remove(t)
             return {"message": "transaction deleted"}
     return {"message": "transaction not found"}
-
-@app.put("/transacciones/{id}", response_model=Transaction)
-async def update_transaction(id: int, updated_transaction: Transaction):
-    for t in transaction:
-        if t.id == id:
-            t.description = updated_transaction.description
-            t.facture = updated_transaction.facture
-            return t
-    return {"message": "transaction not found"}
-    return {"message": "client not found"}
-#uv pip list para ver las dependencias
-
-'''
-Create models (transaction, facture,)
-Facture/(id, date, client, totalvalue)
-transaction(id, description, facture)
-'''
-
-
