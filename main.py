@@ -14,6 +14,10 @@ def Listar_clientes():
 @app.post("/clientes" )
 def create_clients(date_client: client):
     list_clients.append(date_client) #append agrega el cliente a la lista de clientes
+    if not list_clients:
+        date_client.id = 1
+    else:
+        date_client.id = max(client.id for client in list_clients) + 1
     return {"message": "client created"}
 
 #reto: crear un nuevo endponint y que me remote un solo cliente 
