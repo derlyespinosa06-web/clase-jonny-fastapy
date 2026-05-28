@@ -1,110 +1,134 @@
 from fastapi import FastAPI
-from modelos.cliente import Client, Clientcreate, Clientt
-from modelos.facture import Facture
-from modelos.transaction import Transaction
+from pydantic import BaseModel
+from datetime import datetime
 
 app = FastAPI()
 
-list_clients: list[Client] = []
-facture: list[Facture] = []
-transaction: list[Transaction] = []
+# Listas en memoria con tipado estricto 
+lista_clientes: list["Cliente"] = []
+lista_facturas: list["Factura"] = []
+lista_transacciones: list["Transaccion"] = []
 
-#models
+# --- MODELOS 
 
+class ClienteBase(BaseModel):
+    name: str
+    age: int
+    description: str | None = None
+
+class Cliente(ClienteBase):
+    id: int | None = None
+
+# Aquí está tu estructura exacta de la Factura: id, fecha, cliente, valortotal
+class FacturaBase(BaseModel):
+    fecha: str
+    cliente_id: int
+    valor_total: float
+
+class Factura(FacturaBase):
+    id: int | None = None
+
+# Aquí está tu estructura de Transacción: id, descripcion, factura
+class TransaccionBase(BaseModel):
+    descripcion: str
+    factura_id: int
+
+class Transaccion(TransaccionBase):
+    id: int | None = None
+
+
+# --- ENDPOINTS CLIENTES ---
+ # Aqui se mostrara una lista de clientes, cada cliente con su id, nombre, edad y descripción.
 @app.get("/clientes")
-async def Listar_clientes():
-    return {"clients": list_clients}
+async def listar_clientes():
+    return {"clientes": lista_clientes}
 
-@app.post("/clientes", response_model=Client)
-async def create_clients(date_client: Clientcreate):
+3
+@app.post("/clientes", response_model=Cliente)
+async def create_clients(data_cliente: ClienteBase):
 
-    Client_val = Clientt.model_validate(date_client.model_dump()) #el model dump convierte el objeto date_client en un diccionario para que pueda ser validado por el modelo Clientt
+    #se agrega un nuevo cliente a la lista de clientes, validando los datos de entrada con el modelo ClienteBase y luego creando un nuevo objeto Cliente con un ID asignado.
+    nuevo_cliente = Cliente.model_validate(data_cliente.model_dump())
 
-    Client_val.id = len(list_clients) + 1 #asignamos un id al cliente que se va a crear, el id es igual al tamaño de la lista de clientes + 1
-    
-    list_clients.append(Client_val) #agregamos el cliente a la lista de clientes
-    return Client_val
+    #cada cliente nuevo se le asigna un ID incremental basado en la longitud de la lista de clientes, asegurando que cada cliente tenga un ID.
+    nuevo_cliente.id = len(lista_clientes) + 1
 
-#reto: crear un nuevo endponint y que me remote un solo cliente 
-@app.get("/clientes/{id}", response_model=Client)
+    #se agrega un cliente a la lista
+    lista_clientes.append(nuevo_cliente)
+    return nuevo_cliente
+
+#reto crear un endpoint y que me remote un solo cliente
+@app.get("/clientes/{id}", response_model=Cliente)
 async def get_client(id: int):
-    for client in list_clients:
+    for client in lista_clientes:
         if client.id == id:
             return client
-    return {"message": "client not found"}
+    return {"message": "cliente no encontrado"}
 
-@app.delete("/clientes/{id}", response_model=Client)
+#reto crear un endpoint para eliminar un cliente
+@app.delete("/clientes/{id}")
 async def delete_client(id: int):
-    for client in list_clients:
+    for client in lista_clientes:
         if client.id == id:
-            list_clients.remove(client) #remove elimina el cliente de la lista de clientes
-            return {"message": "client deleted"}
-    return {"message": "client not found"}
+            lista_clientes.remove(client)
+            return {"message": "cliente eliminado"}
+    return {"message": "cliente no encontrado"}
 
-@app.put("/clientes/{id}", response_model=Client)
-async def update_client(id: int, date_client: Clientcreate):
-    for client in list_clients:
-        if client.id == id:
-            cli_val = Clientt.model_validate(date_client.model_dump()) #validamos el cliente que se va a actualizar
-            client.name = cli_val.name
-            client.age = cli_val.age
-            client.description = cli_val.description
-            return client
+#reto crear un endpoint para actualizar un cliente
+@app.put("/clientes/{id}", response_model=Cliente)
+async def update_cliente(id: int, data_cliente: ClienteBase):
+    for cliente in lista_clientes:
+        if cliente.id == id:
+            # 1. Validamos y volcamos los datos entrantes en un diccionario o nuevo objeto
+            datos_nuevos = data_cliente.model_dump()
+            
+            # 2. Actualizamos los atributos del cliente existente en la lista
+            cliente.name = datos_nuevos["name"]
+            cliente.age = datos_nuevos["age"]
+            cliente.description = datos_nuevos["description"]
+            
+            return cliente
+        return {"message": "cliente no encontrado"}
 
 
-'''
-Create models (transaction, facture,)
-Facture/(id, date, client, totalvalue)
-transaction(id, description, facture)
-'''
-# FACTURES ENDPOINTS
+ # --- ENDPOINTS FACTURAS ---
 @app.get("/facturas")
-async def list_factures():
-    return {"factures": facture}
+async def listar_facturas():
+     return {"facturas": lista_facturas}
 
-@app.post("/facturas", response_model=Facture)
-async def create_facture(new_facture: Facture):
-    new_facture.id = len(facture) + 1
-    facture.append(new_facture)
-    return new_facture
+@app.post("/facturas", response_model=Factura)
+async def crear_factura(data_f: FacturaBase):
+     # Validamos y creamos la factura con su ID correspondiente
+     nueva_f = Factura.model_validate(data_f.model_dump())
+     nueva_f.id = len(lista_facturas) + 1
+     lista_facturas.append(nueva_f)
+     return nueva_f
 
-@app.get("/facturas/{id}", response_model=Facture)
-async def get_facture(id: int):
-    for f in facture:
-        if f.id == id:
-            return f
-    return {"message": "facture not found"}
+@app.get("/facturas/{id}", response_model=Factura)
+async def get_factura(id: int):
+     for f in lista_facturas:
+         if f.id == id:
+             return f
+     return {"message": "factura not found"}
 
-@app.delete("/facturas/{id}")
-async def delete_facture(id: int):
-    for f in facture:
-        if f.id == id:
-            facture.remove(f)
-            return {"message": "facture deleted"}
-    return {"message": "facture not found"}
 
-# TRANSACTIONS ENDPOINTS
+ # --- ENDPOINTS TRANSACCIONES ---
+
 @app.get("/transacciones")
-async def list_transactions():
-    return {"transactions": transaction}
+async def listar_transacciones():
+     return {"transactions": lista_transacciones}
 
-@app.post("/transacciones", response_model=Transaction)
-async def create_transaction(new_transaction: Transaction):
-    new_transaction.id = len(transaction) + 1
-    transaction.append(new_transaction)
-    return new_transaction
+@app.post("/transacciones", response_model=Transaccion)
+async def crear_transaccion(data_t: TransaccionBase):
+     # Validamos y creamos la transacción relacionándola con la factura
+     nueva_t = Transaccion.model_validate(data_t.model_dump())
+     nueva_t.id = len(lista_transacciones) + 1
+     lista_transacciones.append(nueva_t)
+     return nueva_t
 
-@app.get("/transacciones/{id}", response_model=Transaction)
+@app.get("/transacciones/{id}", response_model=Transaccion)
 async def get_transaction(id: int):
-    for t in transaction:
-        if t.id == id:
-            return t
-    return {"message": "transaction not found"}
-
-@app.delete("/transacciones/{id}")
-async def delete_transaction(id: int):
-    for t in transaction:
-        if t.id == id:
-            transaction.remove(t)
-            return {"message": "transaction deleted"}
-    return {"message": "transaction not found"}
+     for t in lista_transacciones:
+         if t.id == id:
+             return t
+     return {"message": "transaction not found"}
